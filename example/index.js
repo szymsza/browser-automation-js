@@ -1,6 +1,6 @@
 const Chromium = require('../browsers/chromium');
 
-const browserId = '5367f1eb-d67f-4c4a-b1cd-c46a6cb59574';  // TODO
+const browserId = 'XXX';  // TODO
 
 (async () => {
   const browser = await Chromium.init(browserId);
