@@ -4,38 +4,17 @@
 
 const WebSocket = require('ws');
 const { send, sleep } = require('../helpers');
+const Browser = require('./browser');
 
-class Chromium {
-
-  wsAutocloseDelay;
-  wsAutocloseTimeout = null;
-
-  wsEndpoint;
-  ws;
+class Chromium extends Browser {
   sessionId;
   static requestId = 0;
 
-  constructor(staticInitUsed = false) {
-    if (staticInitUsed !== true) {
-      throw new Error('Do not instantiate this class by using the constructor. Instead, use the static async `init` method like `const browser = await Browser.init(...)`.');
-    }
-  }
+  async initializeConnection(browserId, port, host) {
+    this.beforeAction();
 
-  // Constructors cannot be async
-  static async init(browserId, autocloseTimeout = 100, port = 9222, host = '127.0.0.1') {
-    const c = new Chromium(true);
-    c.wsEndpoint = `ws://${host}:${port}/devtools/browser/${browserId}`;
-    c.wsAutocloseDelay = autocloseTimeout;
-    await c.#initializeConnection();
-    return c;
-  }
+    this.wsEndpoint = `ws://${host}:${port}/devtools/browser/${browserId}`;
 
-  setAutocloseTimeout() {
-    // Auto close the socket when not sending any commands
-    this.wsAutocloseTimeout = setTimeout(() => this.ws.close(), this.wsAutocloseDelay);
-  }
-
-  async #initializeConnection() {
     // Create a websocket to issue CDP commands.
     this.ws = new WebSocket(this.wsEndpoint, { perMessageDeflate: false });
     await new Promise(resolve => this.ws.once('open', resolve));
@@ -57,11 +36,11 @@ class Chromium {
       },
     })).result.sessionId;
 
-    this.setAutocloseTimeout();
+    this.afterAction();
   }
 
   async navigate(url) {
-    clearTimeout(this.wsAutocloseTimeout);
+    this.beforeAction();
 
     await send(this.ws, {
       sessionId: this.sessionId,
@@ -74,11 +53,11 @@ class Chromium {
 
     await sleep(10);
 
-    this.setAutocloseTimeout();
+    this.afterAction();
   }
 
   async click(x, y) {
-    clearTimeout(this.wsAutocloseTimeout);
+    this.beforeAction();
 
     await send(this.ws, {
       sessionId: this.sessionId,
@@ -105,12 +84,7 @@ class Chromium {
       },
     });
 
-    this.setAutocloseTimeout();
-  }
-
-  close() {
-    clearTimeout(this.wsAutocloseTimeout);
-    this.ws.close();
+    this.afterAction()
   }
 }
 
