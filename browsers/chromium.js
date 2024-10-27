@@ -11,8 +11,6 @@ class Chromium extends Browser {
   static requestId = 0;
 
   async initializeConnection(browserId, port, host) {
-    this.beforeAction();
-
     this.wsEndpoint = `ws://${host}:${port}/devtools/browser/${browserId}`;
 
     // Create a websocket to issue CDP commands.
@@ -34,14 +32,10 @@ class Chromium extends Browser {
         targetId: pageTarget.targetId,
         flatten: true,
       },
-    })).result.sessionId;
-
-    this.afterAction();
+    })).result.sessionId;;
   }
 
   async navigate(url) {
-    this.beforeAction();
-
     await send(this.ws, {
       sessionId: this.sessionId,
       id: Chromium.requestId++, // Note that IDs are independent between sessions.
@@ -52,13 +46,9 @@ class Chromium extends Browser {
     });
 
     await sleep(10);
-
-    this.afterAction();
   }
 
   async click(x, y) {
-    this.beforeAction();
-
     await send(this.ws, {
       sessionId: this.sessionId,
       id: Chromium.requestId++,
@@ -83,8 +73,6 @@ class Chromium extends Browser {
         button: 'left',
       },
     });
-
-    this.afterAction()
   }
 }
 
