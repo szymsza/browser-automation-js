@@ -8,7 +8,7 @@ const navigateUrl = 'http://127.0.0.1:3000/';
 
 
 (async () => {
-  const browser = await Chromium(browserId);
+  const browser = await Chromium.init(browserId);
   await browser.navigate(navigateUrl);
   await browser.click(100, 100);
 })();

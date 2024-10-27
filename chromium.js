@@ -5,85 +5,113 @@
 const WebSocket = require('ws');
 const { send, sleep } = require('./helpers');
 
-const Browser = async (browserId, autocloseTimeout = 100) => {
-  const endpoint = `ws://127.0.0.1:9222/devtools/browser/${browserId}`;
+class Chromium {
 
-  // Create a websocket to issue CDP commands.
-  const ws = new WebSocket(endpoint, { perMessageDeflate: false });
-  await new Promise(resolve => ws.once('open', resolve));
+  wsAutocloseDelay;
+  wsAutocloseTimeout = null;
 
-  // Get list of all targets and find a "page" target.
-  const targetsResponse = await send(ws, {
-    id: 1,
-    method: 'Target.getTargets',
-  });
-  const pageTarget = targetsResponse.result.targetInfos.find(info => info.type === 'page');
+  wsEndpoint;
+  ws;
+  sessionId;
+  static requestId = 0;
 
-  // Attach to the page target.
-  const sessionId = (await send(ws, {
-    id: 2,
-    method: 'Target.attachToTarget',
-    params: {
-      targetId: pageTarget.targetId,
-      flatten: true,
-    },
-  })).result.sessionId;
-
-  // Auto close the socket when not sending any commands
-  let wsAutocloseTimeout = null;
-  const setAutocloseTimeout = () => {
-    wsAutocloseTimeout = setTimeout(() => ws.close(), autocloseTimeout);
+  constructor(staticInitUsed = false) {
+    if (staticInitUsed !== true) {
+      throw new Error('Do not instantiate this class by using the constructor. Instead, use the static async `init` method like `const browser = await Browser.init(...)`.');
+    }
   }
 
-  setAutocloseTimeout();
-  return {
-    navigate: async (url) => {
-      clearTimeout(wsAutocloseTimeout);
-      await send(ws, {
-        sessionId,
-        id: 1, // Note that IDs are independent between sessions.
-        method: 'Page.navigate',
-        params: {
-          url: url,
-        },
-      });
+  // Constructors cannot be async
+  static async init(browserId, autocloseTimeout = 100, port = 9222, host = '127.0.0.1') {
+    const c = new Chromium(true);
+    c.wsEndpoint = `ws://${host}:${port}/devtools/browser/${browserId}`;
+    c.wsAutocloseDelay = autocloseTimeout;
+    await c.#initializeConnection();
+    return c;
+  }
 
-      await sleep(10);
-      setAutocloseTimeout();
-    },
-    click: async (x, y) => {
-      clearTimeout(wsAutocloseTimeout);
-      await send(ws, {
-        sessionId,
-        id: 2,
-        method: 'Input.dispatchMouseEvent',
-        params: {
-          x,
-          y,
-          type: 'mousePressed',
-          clickCount: 1,
-          button: 'left',
-        },
-      });
+  setAutocloseTimeout() {
+    // Auto close the socket when not sending any commands
+    this.wsAutocloseTimeout = setTimeout(() => this.ws.close(), this.wsAutocloseDelay);
+  }
 
-      await send(ws, {
-        sessionId,
-        id: 3,
-        method: 'Input.dispatchMouseEvent',
-        params: {
-          x,
-          y,
-          type: 'mouseReleased',
-          button: 'left',
-        },
-      });
-      setAutocloseTimeout();
-    },
-    close: () => {
-      clearTimeout(wsAutocloseTimeout);
-      ws.close()
-    },
-  };
-};
+  async #initializeConnection() {
+    // Create a websocket to issue CDP commands.
+    this.ws = new WebSocket(this.wsEndpoint, { perMessageDeflate: false });
+    await new Promise(resolve => this.ws.once('open', resolve));
 
-module.exports = Browser;
+    // Get list of all targets and find a "page" target.
+    const targetsResponse = await send(this.ws, {
+      id: Chromium.requestId++,
+      method: 'Target.getTargets',
+    });
+    const pageTarget = targetsResponse.result.targetInfos.find(info => info.type === 'page');
+
+    // Attach to the page target.
+    this.sessionId = (await send(this.ws, {
+      id: Chromium.requestId++,
+      method: 'Target.attachToTarget',
+      params: {
+        targetId: pageTarget.targetId,
+        flatten: true,
+      },
+    })).result.sessionId;
+
+    this.setAutocloseTimeout();
+  }
+
+  async navigate(url) {
+    clearTimeout(this.wsAutocloseTimeout);
+
+    await send(this.ws, {
+      sessionId: this.sessionId,
+      id: Chromium.requestId++, // Note that IDs are independent between sessions.
+      method: 'Page.navigate',
+      params: {
+        url: url,
+      },
+    });
+
+    await sleep(10);
+
+    this.setAutocloseTimeout();
+  }
+
+  async click(x, y) {
+    clearTimeout(this.wsAutocloseTimeout);
+
+    await send(this.ws, {
+      sessionId: this.sessionId,
+      id: Chromium.requestId++,
+      method: 'Input.dispatchMouseEvent',
+      params: {
+        x,
+        y,
+        type: 'mousePressed',
+        clickCount: 1,
+        button: 'left',
+      },
+    });
+
+    await send(this.ws, {
+      sessionId: this.sessionId,
+      id: Chromium.requestId++,
+      method: 'Input.dispatchMouseEvent',
+      params: {
+        x,
+        y,
+        type: 'mouseReleased',
+        button: 'left',
+      },
+    });
+
+    this.setAutocloseTimeout();
+  }
+
+  close() {
+    clearTimeout(this.wsAutocloseTimeout);
+    this.ws.close();
+  }
+}
+
+module.exports = Chromium;
