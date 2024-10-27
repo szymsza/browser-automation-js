@@ -3,7 +3,7 @@
 // Getting started repo: https://github.com/aslushnikov/getting-started-with-cdp/blob/master/README.md
 
 const WebSocket = require('ws');
-const { send, sleep } = require('./helpers');
+const { send, sleep } = require('../helpers');
 
 class Chromium {
 

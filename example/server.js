@@ -2,8 +2,6 @@ const { createServer } = require('node:http');
 const hostname = '127.0.0.1';
 const port = 3000;
 
-const redirect = 'https://jakub-cdp-test.free.beeceptor.com';
-
 const server = createServer((req, res) => {
   if (req.url === '/redirected') {
     console.log('Link clicked!');
