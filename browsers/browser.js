@@ -12,10 +12,12 @@ class Browser {
   }
 
   // Constructors cannot be async
-  static async init(browserId, autocloseTimeout = 100, port = 9222, host = '127.0.0.1') {
+  static async init(browserId = null, autocloseTimeout = 100, port = 9222, host = '127.0.0.1') {
     const browser = new this(true);
     browser.wsAutocloseDelay = autocloseTimeout;
+    browser.beforeMethod();
     await browser.initializeConnection(browserId, port, host);
+    browser.afterMethod()
 
     // Run hooks before and after method calls
     return new Proxy(browser, {
@@ -34,8 +36,9 @@ class Browser {
     });
   }
 
-  close() {
+  async close() {
     clearTimeout(this.wsAutocloseTimeout);
+    await this.closeConnection();
     this.ws.close();
   }
 
@@ -45,7 +48,7 @@ class Browser {
 
   afterMethod() {
     // Auto close the socket when not sending any commands
-    this.wsAutocloseTimeout = setTimeout(() => this.close(), this.wsAutocloseDelay);
+    this.wsAutocloseTimeout = setTimeout(async () => await this.close(), this.wsAutocloseDelay);
   }
 
   #methodNotImplemented(methodName) {
@@ -57,6 +60,8 @@ class Browser {
   async initializeConnection(_browserId, _port, _host) {
     this.#methodNotImplemented('initializeConnection');
   }
+
+  async closeConnection() {}
 
   async navigate(_url) {
     this.#methodNotImplemented('navigate');
