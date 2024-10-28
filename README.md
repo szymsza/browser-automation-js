@@ -11,6 +11,8 @@ Run `npm install` to install dependencies.
 ## Example
 Run `npm run serve` and keep the server up.
 
-Start a Chromium instance, e.g., by running `brave --headless --no-sandbox --remote-debugging-port=9222`. You will be presented with a message like `DevTools listening on ws://127.0.0.1:9222/devtools/browser/XXX`. Copy the browser id XXX and insert it into `examples/index.js`, constant `browserId`.
+Start a Chromium instance, e.g., by running `brave --headless --no-sandbox --remote-debugging-port=9223`. You will be presented with a message like `DevTools listening on ws://127.0.0.1:9222/devtools/browser/XXX`. Copy the browser id XXX and insert it into `examples/index.js`, constant `browserId`.
 
-Run `npm run test`. You should see a message *'Link clicked!'* in the **server** console. This means that the test script in `examples/index.js` successfully connected to your browser, opened the page server by `examples/server.js`, and clicked the button on the page.
+Next, start a Firefox instance by running `firefox --headless --remote-debugging-port=9222`. You will be presented with a message like `WebDriver BiDi listening on ws://127.0.0.1:9222`. You do not need to copy anything into the source code.
+
+Run `npm run test`. You should see a message *'Link clicked!'* twice in the **server** console. This means that the test script in `examples/index.js` successfully connected to both of your browsers, opened the page served by `examples/server.js`, and clicked the button on the page.
