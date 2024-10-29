@@ -20,10 +20,7 @@ class Firefox extends Browser {
     const sessionId = (await send(this.ws, {
       'method': 'session.new',
       'params': {
-        'capabilities': {
-          idk: true,
-          acceptInsecureCerts: true,
-        },
+        'capabilities': {},
       },
       'id': Firefox.requestId++,
     })).result.sessionId;
